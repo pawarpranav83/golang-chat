@@ -1,0 +1,33 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: ci-test
+
+# event that triggers teh workflow
+on:
+# run test when changes are pushed to master branch
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      # provides input parameters to the action
+      with:
+        go-version: '1.21.3'
+
+    # not necessary deleted in the video, because app will be built automatically when we run go test
+    # - name: Build
+    #   run: go build -v ./...
+
+    - name: Test
+    # test command in Makefile
+      run: make test
