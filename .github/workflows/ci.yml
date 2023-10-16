@@ -50,12 +50,12 @@ jobs:
 
     # Installing migrate, to run the migrate commands
     - name: Install golang-migrate
-    
+
     # first we install pre-built binary, then, mv it to usr/bin, so that it can be used by go, then, test whether it installed successfully or not using which migrate
     # Note - we use usr/bin/migrate, so the binary file moved to usr/bin will have a new name - migrate, which is used in our commands
       run: |
         curl -L https://github.com/golang-migrate/migrate/releases/download/v4.16.2/migrate.linux-amd64.tar.gz | tar xvz
-        sudo mv migrate.linux-amd64 /usr/bin/migrate
+        sudo mv migrate /usr/bin/
         which migrate
     
     # Creates the db schema in the postgres db that was setup
