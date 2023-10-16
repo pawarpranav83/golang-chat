@@ -15,6 +15,26 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+
+    # Copied, search github actions postgres, it sets the postgres db
+    services:
+      # Label used to access the service container
+      postgres:
+        # Docker Hub image
+        image: postgres:alpine
+        # Provide the password for postgres
+        env:
+          POSTGRES_USER: root
+          POSTGRES_DB: chat-db
+          POSTGRES_PASSWORD: mysecretpassword
+        # Set health checks to wait until postgres has started
+        # health check options tell teh runner how to check if postgres has started successfully or not
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
     - uses: actions/checkout@v3
 
@@ -27,6 +47,10 @@ jobs:
     # not necessary deleted in the video, because app will be built automatically when we run go test
     # - name: Build
     #   run: go build -v ./...
+
+    # Creates the db schema in the postgres db that was setup
+    - name: Run migrations
+      run: make migrate-up
 
     - name: Test
     # test command in Makefile
