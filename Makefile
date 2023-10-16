@@ -23,4 +23,7 @@ sqlc:
 test:
 	go test -v -cover ./...
 
-.PHONY: createdb, dropdb, migrate-down, migrate-up, sqlc
+server:
+	go run main.go
+
+.PHONY: createdb dropdb migrate-down migrate-up sqlc server

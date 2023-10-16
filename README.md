@@ -9,3 +9,5 @@ DBTX Interface in db.go - Doubt.
 Rewatch #6 lecture.
 
 Doubt - Background Ctx.
+
+Gin Docs Ref - https://github.com/gin-gonic/gin/blob/v1.9.1/docs/doc.md
