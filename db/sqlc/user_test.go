@@ -12,10 +12,13 @@ import (
 
 // To avoid code duplication of creating a random user for create user test func and get user test func, we create a seperate non-test func.
 func createRandomUser(t *testing.T) User {
+	hashedPassword, err := util.HashPassword(util.RandomString(6))
+	require.NoError(t, err)
+
 	arg := CreateUserParams{
 		Username: util.RandomUsername(),
 		Email:    util.RandomEmail(),
-		Password: util.RandomPassword(),
+		Password: hashedPassword,
 	}
 
 	user, err := testQueries.CreateUser(context.Background(), arg)

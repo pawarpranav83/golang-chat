@@ -8,11 +8,7 @@ import (
 
 	// postgres driver for connection, blank identifier (otherwise would be removed)
 	_ "github.com/lib/pq"
-)
-
-const (
-	dbDriver = "postgres"
-	dbSource = "postgresql://root:mysecretpassword@localhost:5432/chat-db?sslmode=disable"
+	"github.com/pawarpranav83/golang-chat/db/util"
 )
 
 // Queries struct contains db DBTX - which can either be a db conn or a db transaction.
@@ -22,9 +18,13 @@ var testQueries *Queries
 var testDB *sql.DB
 
 func TestMain(m *testing.M) {
+	config, err := util.LoadConfig("../../")
+	if err != nil {
+		log.Fatal("Cannot load configurations: ", err)
+	}
+
 	// conn to db
-	var err error
-	testDB, err = sql.Open(dbDriver, dbSource)
+	testDB, err = sql.Open(config.DBDriver, config.DBSource)
 
 	if err != nil {
 		log.Fatal("Cannot connect to db: ", err)

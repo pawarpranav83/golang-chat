@@ -15,3 +15,6 @@ ORDER BY id;
 
 -- name: Deleteroom :exec
 DELETE FROM rooms WHERE id = $1;
+
+-- name: DeleteRoombyRoomname :exec
+DELETE FROM rooms WHERE roomname = $1;

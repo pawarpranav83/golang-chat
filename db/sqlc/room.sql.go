@@ -24,6 +24,15 @@ func (q *Queries) CreateRoom(ctx context.Context, roomname string) (Room, error)
 	return i, err
 }
 
+const deleteRoombyRoomname = `-- name: DeleteRoombyRoomname :exec
+DELETE FROM rooms WHERE roomname = $1
+`
+
+func (q *Queries) DeleteRoombyRoomname(ctx context.Context, roomname string) error {
+	_, err := q.db.ExecContext(ctx, deleteRoombyRoomname, roomname)
+	return err
+}
+
 const deleteroom = `-- name: Deleteroom :exec
 DELETE FROM rooms WHERE id = $1
 `

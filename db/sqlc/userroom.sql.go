@@ -44,6 +44,23 @@ func (q *Queries) DeleteUserfromRoom(ctx context.Context, arg DeleteUserfromRoom
 	return err
 }
 
+const getRoomuser = `-- name: GetRoomuser :one
+SELECT room_id, user_id FROM userroom
+WHERE room_id = $1 AND user_id = $2
+`
+
+type GetRoomuserParams struct {
+	RoomID int64 `json:"room_id"`
+	UserID int64 `json:"user_id"`
+}
+
+func (q *Queries) GetRoomuser(ctx context.Context, arg GetRoomuserParams) (Userroom, error) {
+	row := q.db.QueryRowContext(ctx, getRoomuser, arg.RoomID, arg.UserID)
+	var i Userroom
+	err := row.Scan(&i.RoomID, &i.UserID)
+	return i, err
+}
+
 const getRoomusers = `-- name: GetRoomusers :many
 SELECT room_id, user_id FROM userroom
 WHERE room_id = $1
@@ -51,6 +68,34 @@ WHERE room_id = $1
 
 func (q *Queries) GetRoomusers(ctx context.Context, roomID int64) ([]Userroom, error) {
 	rows, err := q.db.QueryContext(ctx, getRoomusers, roomID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Userroom
+	for rows.Next() {
+		var i Userroom
+		if err := rows.Scan(&i.RoomID, &i.UserID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUserRooms = `-- name: GetUserRooms :many
+SELECT room_id, user_id FROM userroom
+WHERE user_id = $1
+`
+
+func (q *Queries) GetUserRooms(ctx context.Context, userID int64) ([]Userroom, error) {
+	rows, err := q.db.QueryContext(ctx, getUserRooms, userID)
 	if err != nil {
 		return nil, err
 	}

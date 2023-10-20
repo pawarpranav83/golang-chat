@@ -39,10 +39,6 @@ func RandomUsername() string {
 	return RandomString(6)
 }
 
-func RandomPassword() string {
-	return RandomString(8)
-}
-
 func RandomEmail() string {
 	return RandomString(6) + "@chat.io"
 }

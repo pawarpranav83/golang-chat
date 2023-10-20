@@ -3,17 +3,28 @@ package api
 import (
 	"database/sql"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lib/pq"
 	db "github.com/pawarpranav83/golang-chat/db/sqlc"
+	"github.com/pawarpranav83/golang-chat/db/util"
+	"github.com/pawarpranav83/golang-chat/token"
 )
 
 // Docs for package validator - https://pkg.go.dev/github.com/go-playground/validator
 type createUserRequest struct {
 	// binding is used to use the default validator provided by gin to validate teh data
-	Username string `json:"username" binding:"required"`
-	Email    string `json:"email" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Username string `json:"username" binding:"required,alphanum"`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=6"`
+}
+
+type userResponse struct {
+	ID        int64     `json:"id"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // The ctx provides various methods to read input params, and to write out responses
@@ -28,19 +39,39 @@ func (server *Server) createUser(ctx *gin.Context) {
 		return
 	}
 
-	arg := db.CreateUserParams{
-		Username: req.Username,
-		Email:    req.Email,
-		Password: req.Password,
-	}
-
-	user, err := server.store.CreateUser(ctx, arg)
+	hashedPassword, err := util.HashPassword(req.Password)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, user)
+	arg := db.CreateUserParams{
+		Username: req.Username,
+		Email:    req.Email,
+		Password: hashedPassword,
+	}
+
+	user, err := server.store.CreateUser(ctx, arg)
+	if err != nil {
+		// Doubt
+		if pqErr, ok := err.(*pq.Error); ok {
+			switch pqErr.Code.Name() {
+			case "unique violation":
+				ctx.JSON(http.StatusForbidden, errorResponse(err))
+				return
+			}
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	rsp := userResponse{
+		Username:  user.Username,
+		Email:     user.Email,
+		ID:        user.ID,
+		CreatedAt: user.CreatedAt,
+	}
+	ctx.JSON(http.StatusOK, rsp)
 }
 
 type getUserRequest struct {
@@ -105,7 +136,7 @@ type getUpdateUserRequest struct {
 	ID int64 `uri:"id" binding:"required,min=1"`
 }
 type updateUserRequest struct {
-	Username string `json:"username" binding:"required,min=1"`
+	Username string `json:"username" binding:"required,alphanum"`
 }
 
 func (server *Server) updateUser(ctx *gin.Context) {
@@ -134,4 +165,99 @@ func (server *Server) updateUser(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, user)
+}
+
+type loginUserRequest struct {
+	Username string `json:"username" binding:"required,alphanum"`
+	Password string `json:"password" binding:"required,min=6"`
+}
+
+type loginUserResponse struct {
+	AccessToken string `json:"access_token"`
+	User        userResponse
+}
+
+func (server *Server) loginUser(ctx *gin.Context) {
+	var req loginUserRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	user, err := server.store.GetUserbyUsername(ctx, req.Username)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	err = util.CheckPassword(req.Password, user.Password)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+
+	accessToken, err := server.tokenMaker.CreateToken(user.Username, user.ID, server.config.AccessTokenDuration)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	userRsp := userResponse{
+		ID:        user.ID,
+		Username:  user.Username,
+		Email:     user.Email,
+		CreatedAt: user.CreatedAt,
+	}
+	rsp := loginUserResponse{
+		AccessToken: accessToken,
+		User:        userRsp,
+	}
+
+	ctx.JSON(http.StatusOK, rsp)
+}
+
+func (server *Server) getMe(ctx *gin.Context) {
+	payload := ctx.MustGet(authorizationPayloadKey)
+	ctx.JSON(http.StatusOK, payload)
+}
+
+func (server *Server) deleteMe(ctx *gin.Context) {
+	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+
+	err := server.store.DeleteUserbyUsername(ctx, payload.Username)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, "success")
+}
+
+func (server *Server) updateMe(ctx *gin.Context) {
+
+	var reqUpdate updateUserRequest
+
+	if err := ctx.ShouldBindJSON(&reqUpdate); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+
+	arg := db.UpdateUserParams{
+		ID:       payload.ID,
+		Username: reqUpdate.Username,
+	}
+
+	updatedUser, err := server.store.UpdateUser(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, updatedUser)
 }
