@@ -15,6 +15,7 @@ type createRoomRequest struct {
 	Name string `json:"name"`
 }
 
+// Creating Room
 func (server *Server) InitiateRoom(ctx *gin.Context) {
 	var req createRoomRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -39,6 +40,7 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
+// User Joining Room
 func (server *Server) JoinRoom(ctx *gin.Context) {
 	conn, err := upgrader.Upgrade(ctx.Writer, ctx.Request, nil)
 	if err != nil {
@@ -81,6 +83,7 @@ type getRoomsResponse struct {
 	Name string `json:"name"`
 }
 
+// Get all rooms created till now
 func (server *Server) getRooms(ctx *gin.Context) {
 	rooms := make([]getRoomsResponse, 0)
 
@@ -99,6 +102,7 @@ type getClientsResponse struct {
 	Username string `json:"username"`
 }
 
+// Get all clients in the particular room
 func (server *Server) getClients(ctx *gin.Context) {
 	var clients []getClientsResponse
 	roomId := ctx.Param("roomId")

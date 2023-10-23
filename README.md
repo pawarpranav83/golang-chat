@@ -30,5 +30,6 @@ Note - Cannot delete rooms / users until it has entries in userroom table.
 
 Remaining - 
     
+    Make roomid as int64 is ws.go
     Before a user connects to a room with ws, we check whether that user is a member of that room.
     Use IN operation to find the usernames of users in a particular room - use db middleware.
