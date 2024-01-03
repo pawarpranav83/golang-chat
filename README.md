@@ -1,3 +1,8 @@
+WORK IN PROGRESS (FRONTEND)
+
+
+
+
 In db/query, the comments on top instructs sqlc to generate go code for that query.
 
 For testing we use testify package instead of doing if else statements.
